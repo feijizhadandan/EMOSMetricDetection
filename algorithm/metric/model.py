@@ -71,6 +71,15 @@ class decoderformer(nn.Module):
 class liner_ae(nn.Module):
     def __init__(self, num_blocks_encoder, num_blocks_decoder, sample_dim, hidden_dim, window_size, step_size, head):
         super(liner_ae, self).__init__()
+
+        self.num_blocks_encoder = num_blocks_encoder
+        self.num_blocks_decoder = num_blocks_decoder
+        self.sample_dim = sample_dim
+        self.hidden_dim = hidden_dim
+        self.window_size = window_size
+        self.step_size = step_size
+        self.head = head
+
         self.linear1 = nn.Linear(sample_dim, hidden_dim)
         self.normalize = nn.LayerNorm([step_size, hidden_dim])
         self.linear2 = nn.Linear(hidden_dim, sample_dim)
