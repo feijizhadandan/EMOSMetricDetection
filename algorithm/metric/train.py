@@ -14,8 +14,8 @@ from utils.threadUtil import threadUtil
 
 def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
 
-    train_startTimestamp = trainTask.startTime
-    train_endTimestamp = trainTask.endTime
+    train_startTimestamp = trainTask.startTime.timestamp()
+    train_endTimestamp = trainTask.endTime.timestamp()
 
     # 搜集metric训练数据
     metricList = trainParameters.get("metricList")
@@ -88,7 +88,7 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
 
     # TODO 将模型信息保存至数据库
     trainTask.progress = 100
-    trainTask.status ="stopped"
+    trainTask.status = "stopped"
     threadUtil.trainingThreadsMap[trainTask.taskId]["status"] = "stopped"
     # TODO 更新数据库中线程的信息
 
