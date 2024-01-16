@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from algorithm.metric.model import MyDataset, segment
+from dao.DetectionTaskDAO import DetectionTaskDAO
 from entity.DetectionTask import DetectionTask
 from utils import saveModelUtil
 from utils.prometheusUtil import PROMETHEUS
@@ -33,6 +34,7 @@ def detectOnline(threadName: str, detectParam: dict, detectionTask: DetectionTas
     device = torch.device('cuda:0')
     load_model.to(device)
     load_model.eval()
+    # 只有一批
     data_loader = DataLoader(dataset, real_x_windows.shape[0], shuffle=True, drop_last=True)
     real_score = np.array([])
     with torch.no_grad():
@@ -42,6 +44,9 @@ def detectOnline(threadName: str, detectParam: dict, detectionTask: DetectionTas
             real_score = torch.pow(
                 torch.sum(torch.pow(input_x_real[:, window_size - step_size:window_size, :] - real_rebuild, 2), dim=2),
                 0.5)
+
+    detectionTask.status = "stopped"
+    DetectionTaskDAO().update(detectionTask)
 
     # 检测结果
     print("异常score阈值:", load_threshold)

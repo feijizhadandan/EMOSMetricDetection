@@ -13,8 +13,6 @@ from utils.logUtil import LOG
 
 class PrometheusUtil:
 
-    podList = ['train-ss-0', 'travel-b-ss-0']
-
     def __init__(self, host, port):
         self.v1BaseUrl = f"http://{host}:{port}/api/v1"
         self.queries = CONFIG["prometheus.queries"]
@@ -46,11 +44,12 @@ class PrometheusUtil:
         '''
         return self.queries
 
-    def getMetrics(self, metricList: List[str], startTime: int, endTime: int, step: int = 1) -> Dict[
+    def getMetrics(self, metricList: List[str], podList: List[str], startTime: int, endTime: int, step: int = 1) -> Dict[
         str, Dict]:
         '''
         获取指定时间范围内的特定指标
         允许出现-1，当出现-1则可认为其取值为前值如需这样填充，可调用本类的fillMetricsWithPreviousValue方法
+        :param podList: 目标pod名称
         :param metricList: 指标列表，取值必须为config.yaml中promethus.queries中的值
         :param startTime: 起始时间，秒级时间戳
         :param endTime: 结束时间，秒级时间戳
@@ -62,7 +61,7 @@ class PrometheusUtil:
         segSize = int((endTime - startTime + 1) // segment)  # 每段大小
         # LOG.logger.info(f"prometheus: 需要访问{segment}段，每段大小为{segSize}")
         # podNameList = self.getAllPodNamesRelatedToTrace()
-        podNameList = self.podList
+        podNameList = podList
         metricMap = {
             metric: {
                 podName: [-1] * int((endTime - startTime + 1) / step)

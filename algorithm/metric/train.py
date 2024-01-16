@@ -1,3 +1,6 @@
+import datetime
+import json
+
 import numpy as np
 from torch.optim import Adam
 import torch
@@ -5,6 +8,10 @@ from sklearn import metrics
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import scipy.io as scio
+
+from dao.ModelMetadataDAO import ModelMetadataDAO
+from dao.TrainTaskDAO import TrainTaskDAO
+from entity.ModelMetadata import ModelMetadata
 from entity.TrainTask import TrainTask
 from algorithm.metric.model import liner_ae, MyDataset, segment, metric_loss, evalution_roc
 from utils.prometheusUtil import PROMETHEUS
@@ -16,15 +23,17 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
 
     train_startTimestamp = trainTask.startTime.timestamp()
     train_endTimestamp = trainTask.endTime.timestamp()
+    # 数据来源
+    podList = ['train-ss-0', 'travel-b-ss-0']
 
     # 搜集metric训练数据
     metricList = trainParameters.get("metricList")
-    metricMap = PROMETHEUS.getMetrics(metricList, startTime=train_startTimestamp, endTime=train_endTimestamp)
+    metricMap = PROMETHEUS.getMetrics(metricList, podList, startTime=train_startTimestamp, endTime=train_endTimestamp)
     PROMETHEUS.fillMetricsWithPreviousValue(metricMap)
 
     # 数据处理(处理成数组)
     train_x = []
-    for podName in PROMETHEUS.podList:
+    for podName in podList:
         temList = []
         for metricName in metricList:
             temList.append(metricMap.get(metricName).get(podName))
@@ -84,12 +93,21 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
     real_threshold = mean + 3 * std
 
     # 训练完后保存模型
-    saveModelUtil.saveModelByName(model, epoch=epochMax, podNames=PROMETHEUS.podList, metricName=metricList, threshold=real_threshold, modelName=trainTask.modelName)
+    saveModelUtil.saveModelByName(model, epoch=epochMax, podNames=podList, metricName=metricList, threshold=real_threshold, modelName=trainTask.modelName)
 
-    # TODO 将模型信息保存至数据库
+    # 将模型信息保存至数据库
+    ModelMetadataDAO().insert(
+        ModelMetadata(
+            modelName=trainTask.modelName,
+            createTime=datetime.datetime.now(),
+            meta=json.dumps(trainParameters)
+        )
+    )
     trainTask.progress = 100
     trainTask.status = "stopped"
     threadUtil.trainingThreadsMap[trainTask.taskId]["status"] = "stopped"
-    # TODO 更新数据库中线程的信息
+    # 更新数据库中线程的信息
+    TrainTaskDAO().update(trainTask)
+
 
 

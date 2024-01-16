@@ -27,7 +27,7 @@ class TrainTask(SQLAlchemyBase):
 
     progress: 任务进度, int, 百分比
     '''
-    __tablename__ = 'tracegra_train_task'
+    __tablename__ = 'metric_train_task'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     taskId = Column(String)

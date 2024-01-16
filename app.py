@@ -1,12 +1,18 @@
 import datetime
+import os
 import threading
 import uuid
+from typing import List
 
 from flask import Flask, request, jsonify
 
 from algorithm.metric.detect import detectOnline
 from algorithm.metric.train import onlineTrain
+from dao.DetectionTaskDAO import DetectionTaskDAO
+from dao.ModelMetadataDAO import ModelMetadataDAO
+from dao.TrainTaskDAO import TrainTaskDAO
 from entity.DetectionTask import DetectionTask
+from entity.ModelMetadata import ModelMetadata
 from entity.TrainTask import TrainTask
 from utils.threadUtil import threadUtil
 
@@ -34,7 +40,7 @@ def train():
             target=onlineTrain,
             args=(trainTask.taskId, requestParam["trainParam"], trainTask)
         )
-        # TODO: 将训练线程信息保存到数据库
+        TrainTaskDAO().insert(trainTask=trainTask)
         # 将任务taskId作为线程name
         threadUtil.trainingThreadsMap[trainTask.taskId] = {"threadRef": trainingThread, "status": "running"}
         trainingThread.start()  # 启动训练线程
@@ -66,7 +72,7 @@ def detect():
         )
         threadUtil.onlineDetectionTaskId = detectionTask.taskId
         threadUtil.detectionThreadsMap[detectionTask.taskId] = {"threadRef": onlineThread, "status": "running"}
-        # TODO: 将检测线程信息保存到数据库
+        DetectionTaskDAO().insert(detectionTask=detectionTask)
         onlineThread.start()
         return jsonify({
             "success": True,
@@ -75,6 +81,23 @@ def detect():
         })
     except:
         return jsonify({"success": False, "msg": "创建在线实时检测任务失败", "taskId": ""})
+
+
+@app.route("/listModel", methods=["GET"])
+def listModel():
+    modelMetadataList: List[ModelMetadata] = ModelMetadataDAO().getAll()
+    filenameSet = set([fname for fname in os.listdir("./detectionmodels")])
+    res = []
+    for modelMetadata in modelMetadataList:
+        if f"{modelMetadata.modelName}.pth" in filenameSet:
+            res.append(modelMetadata)
+    return jsonify([modelMetadata.as_dict() for modelMetadata in res])
+
+
+@app.route("/listTrainTask", methods=["GET"])
+def listTrainTask():
+    trainTaskList = TrainTaskDAO().getAll()
+    return jsonify([trainTask.as_dict() for trainTask in trainTaskList])
 
 
 if __name__ == "__main__":
