@@ -8,6 +8,8 @@ from flask import Flask, request, jsonify
 
 from algorithm.metric.detect import detectOnline
 from algorithm.metric.train import onlineTrain
+from dao.DetectionResultDAO import DetectionResultDAO
+from dao.DetectionScoreResultDAO import DetectionScoreResultDAO
 from dao.DetectionTaskDAO import DetectionTaskDAO
 from dao.ModelMetadataDAO import ModelMetadataDAO
 from dao.TrainTaskDAO import TrainTaskDAO
@@ -70,10 +72,11 @@ def detect():
             args=(detectionTask.taskId, requestParam["detectionParam"], detectionTask),
             daemon=True
         )
+        # TODO 线程问题，为什么这个不能在insert之后执行
+        onlineThread.start()
         threadUtil.onlineDetectionTaskId = detectionTask.taskId
         threadUtil.detectionThreadsMap[detectionTask.taskId] = {"threadRef": onlineThread, "status": "running"}
         DetectionTaskDAO().insert(detectionTask=detectionTask)
-        onlineThread.start()
         return jsonify({
             "success": True,
             "msg": "成功创建在线实时检测任务",
@@ -98,6 +101,23 @@ def listModel():
 def listTrainTask():
     trainTaskList = TrainTaskDAO().getAll()
     return jsonify([trainTask.as_dict() for trainTask in trainTaskList])
+
+
+@app.route("/listDetectionTask", methods=["GET"])
+def listDetectionTask():
+    detectionTaskList = DetectionTaskDAO().getAll()
+    return jsonify([detectionTask.as_dict() for detectionTask in detectionTaskList])
+
+
+@app.route("/getDetectionTaskByTaskId/<task_id>", methods=["GET"])
+def getDetectionTaskByTaskId(task_id):
+    # 获取曲线数据
+    scoreResultList = DetectionScoreResultDAO().getByTaskId(task_id)
+    scoreResultJson = [scoreResult.as_dict() for scoreResult in scoreResultList]
+    # 获取检测结果
+    detectionResultList = DetectionResultDAO().getByTaskId(task_id)
+    detectionResultJson = [detectionResult.as_dict() for detectionResult in detectionResultList]
+    return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson})
 
 
 if __name__ == "__main__":

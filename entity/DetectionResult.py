@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, BigInteger, Float, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, BigInteger, Float, DateTime, func, Double
 
 from entity.SQLAlchemyBase import SQLAlchemyBase
 
@@ -24,20 +24,18 @@ class DetectionResult(SQLAlchemyBase):
     __tablename__ = 'metric_detection_result'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    traceId = Column(String)
     taskId = Column(String)
+    podName = Column(String)
     abnormal = Column(Boolean)
-    loss = Column(Float)
-    threshold = Column(Float)
-    traceTime = Column(BigInteger)
+    maxScore = Column(Double)
+    threshold = Column(Double)
 
     def as_dict(self):
         return {
             "id": self.id,
-            "traceId": self.traceId,
             "taskId": self.taskId,
+            "podName": self.podName,
             "abnormal": self.abnormal,
-            "loss": self.loss,
+            "maxScore": self.maxScore,
             "threshold": self.threshold,
-            "traceTime": self.traceTime
         }

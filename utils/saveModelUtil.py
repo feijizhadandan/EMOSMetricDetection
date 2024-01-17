@@ -8,7 +8,7 @@ import torch
 from algorithm.metric.model import liner_ae
 
 
-def loadModelByName(modelName: str) -> Tuple[torch.nn.Module, List[str], List[str], float]:
+def loadModelByName(modelName: str):
     """
     载入模型以及模型相关的对象
     :param modelName: 模型名

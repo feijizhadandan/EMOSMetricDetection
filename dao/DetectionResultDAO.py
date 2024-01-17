@@ -7,6 +7,18 @@ from utils.mysqlUtil import MYSQL
 
 
 class DetectionResultDAO:
+    def insert(self, detectionResult: DetectionResult):
+        session = None
+        try:
+            session = MYSQL.scopedSessionFactory()
+            session.add(detectionResult)
+            session.commit()
+        except Exception:
+            if session:
+                session.rollback()
+            LOG.logger.exception("DetectionResult.insert rollback")
+            raise Exception
+
     def bulkInsert(self, detectionResultList: List[DetectionResult]):
         session = None
         try:

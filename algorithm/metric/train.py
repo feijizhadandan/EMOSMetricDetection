@@ -24,7 +24,7 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
     train_startTimestamp = trainTask.startTime.timestamp()
     train_endTimestamp = trainTask.endTime.timestamp()
     # 数据来源
-    podList = ['train-ss-0', 'travel-b-ss-0']
+    podList = trainParameters.get('podValue')
 
     # 搜集metric训练数据
     metricList = trainParameters.get("metricList")
