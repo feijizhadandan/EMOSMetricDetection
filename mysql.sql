@@ -13,13 +13,16 @@ create table metric_train_task(
 );
 
 # 模型数据库
-create table model_metadata(
-    id bigint auto_increment not null comment '数据库自增id',
-    modelName varchar(100) not null comment '模型名称',
-    createTime datetime not null comment '创建时间',
-    meta json comment '训练参数(json)',
-    primary key (id)
+create table model_metadata
+(
+    id         bigint auto_increment comment '数据库自增id'
+        primary key,
+    modelName  varchar(100)  not null comment '模型名称',
+    mark       int default 1 not null comment '1表示主模型，2表示次级模型',
+    createTime datetime      not null comment '创建时间',
+    meta       json          null comment '训练参数(json)'
 );
+
 
 # 检测任务数据库
 create table metric_detection_task(
@@ -43,4 +46,17 @@ create table metric_detection_result(
     threshold double not null comment '异常阈值score',
     primary key (id)
 );
+
+# 检测时间窗记录数据库
+create table detection_score_record
+(
+    id        bigint auto_increment comment '数据库自增id'
+        primary key,
+    taskId    varchar(100) not null comment '检测任务的id(uuid)',
+    podName   varchar(100) not null comment '检测的pod',
+    score     double       not null comment '窗口内score最大值',
+    startTime datetime     not null comment '时间窗开始时间'
+);
+
+
 

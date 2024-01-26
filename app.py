@@ -92,7 +92,7 @@ def listModel():
     filenameSet = set([fname for fname in os.listdir("./detectionmodels")])
     res = []
     for modelMetadata in modelMetadataList:
-        if f"{modelMetadata.modelName}.pth" in filenameSet:
+        if f"{modelMetadata.modelName}.pth" in filenameSet and modelMetadata.mark == 1:
             res.append(modelMetadata)
     return jsonify([modelMetadata.as_dict() for modelMetadata in res])
 

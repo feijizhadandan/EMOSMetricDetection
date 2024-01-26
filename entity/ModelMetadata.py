@@ -21,6 +21,7 @@ class ModelMetadata(SQLAlchemyBase):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     modelName = Column(String)
+    mark = Column(Integer)
     createTime = Column(DateTime(timezone=True), default=func.now())
     meta = Column(JSON)
 
@@ -28,6 +29,7 @@ class ModelMetadata(SQLAlchemyBase):
        return {
            "id": str(self.id),
            "modelName": str(self.modelName),
+           "mark": str(self.mark),
            "createTime": TIMEFORMAT.addLocalTzinfo(self.createTime),
            "meta": str(self.meta)
        }
