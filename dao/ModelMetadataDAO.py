@@ -37,3 +37,14 @@ class ModelMetadataDAO:
                 session.rollback()
             LOG.logger.exception("ModelMetadataDAO.insert rollback")
             raise Exception
+
+    def getByModelName(self, modelName: str):
+        session = None
+        try:
+            session = MYSQL.scopedSessionFactory()
+            return session.query(ModelMetadata).filter(ModelMetadata.modelName == modelName).first()
+        except Exception:
+            if session:
+                session.rollback()
+            LOG.logger.exception("ModelMetadataDao.getByTaskId rollback")
+            raise Exception

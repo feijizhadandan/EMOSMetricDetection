@@ -117,7 +117,12 @@ def getDetectionTaskByTaskId(task_id):
     # 获取检测结果
     detectionResultList = DetectionResultDAO().getByTaskId(task_id)
     detectionResultJson = [detectionResult.as_dict() for detectionResult in detectionResultList]
-    return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson})
+    # 获取检测模型
+    metricDetectionTask = DetectionTaskDAO().getByTaskId(task_id)
+    modelName = metricDetectionTask.modelName
+    modelMeta = ModelMetadataDAO().getByModelName(modelName)
+    modelMetaJson = modelMeta.as_dict()
+    return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson, "modelMeta": modelMetaJson})
 
 
 if __name__ == "__main__":
