@@ -47,15 +47,16 @@ create table metric_detection_result(
     primary key (id)
 );
 
-# 检测时间窗记录数据库
-create table detection_score_record
-(
-    id        bigint auto_increment comment '数据库自增id'
-        primary key,
-    taskId    varchar(100) not null comment '检测任务的id(uuid)',
-    podName   varchar(100) not null comment '检测的pod',
-    score     double       not null comment '窗口内score最大值',
-    startTime datetime     not null comment '时间窗开始时间'
+# 时间窗分数记录
+create table metric_detection_score_record(
+    id bigint auto_increment not null comment '数据库自增id',
+    taskId varchar(100) not null comment '检测任务的id(uuid)',
+    podName varchar(100) not null comment '检测的pod',
+    score double not null comment '窗口内score最大值',
+    startTime datetime not null comment '时间窗开始时间',
+    normalCnt int not null comment '时间窗内正常时间戳个数',
+    abnormalCnt int not null comment '时间窗内异常时间戳个数',
+    primary key (id)
 );
 
 

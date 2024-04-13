@@ -1,3 +1,4 @@
+import csv
 import datetime
 import os
 import threading
@@ -6,16 +7,19 @@ from typing import List
 
 from flask import Flask, request, jsonify
 
-from algorithm.metric.detect import detectOnline
+from algorithm.metric.detect import detectStart
 from algorithm.metric.train import onlineTrain
 from dao.DetectionResultDAO import DetectionResultDAO
-from dao.DetectionScoreResultDAO import DetectionScoreResultDAO
+from dao.DetectionScoreRecordDAO import DetectionScoreRecordDAO
 from dao.DetectionTaskDAO import DetectionTaskDAO
 from dao.ModelMetadataDAO import ModelMetadataDAO
+from dao.RootCauseResultDAO import RootCauseResultDAO
 from dao.TrainTaskDAO import TrainTaskDAO
 from entity.DetectionTask import DetectionTask
 from entity.ModelMetadata import ModelMetadata
 from entity.TrainTask import TrainTask
+from utils.elasticSearchUtil import ELASTICSEARCH
+from utils.jaegerUtil import JAEGER
 from utils.threadUtil import threadUtil
 
 app = Flask(__name__)
@@ -57,18 +61,19 @@ def detect():
     try:
         startTime = datetime.datetime.fromisoformat(requestParam["startTime"])
         endTime = datetime.datetime.fromisoformat(requestParam["endTime"])
+        isDetectOnline = requestParam["isDetectOnline"]
         curDateTime = datetime.datetime.now()
         detectionTask = DetectionTask(
             taskId=str(uuid.uuid4()),
             modelName=requestParam["modelName"],
-            onlineTask=0,
+            onlineTask=isDetectOnline,
             createTime=curDateTime,
             startTime=startTime,
             endTime=endTime,
             status="running"
         )
         onlineThread = threading.Thread(
-            target=detectOnline,
+            target=detectStart,
             args=(detectionTask.taskId, requestParam["detectionParam"], detectionTask),
             daemon=True
         )
@@ -112,7 +117,7 @@ def listDetectionTask():
 @app.route("/getDetectionTaskByTaskId/<task_id>", methods=["GET"])
 def getDetectionTaskByTaskId(task_id):
     # 获取曲线数据
-    scoreResultList = DetectionScoreResultDAO().getByTaskId(task_id)
+    scoreResultList = DetectionScoreRecordDAO().getByTaskId(task_id)
     scoreResultJson = [scoreResult.as_dict() for scoreResult in scoreResultList]
     # 获取检测结果
     detectionResultList = DetectionResultDAO().getByTaskId(task_id)
@@ -122,8 +127,38 @@ def getDetectionTaskByTaskId(task_id):
     modelName = metricDetectionTask.modelName
     modelMeta = ModelMetadataDAO().getByModelName(modelName)
     modelMetaJson = modelMeta.as_dict()
-    return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson, "modelMeta": modelMetaJson})
+    # 获取根因
+    rootCauseList = RootCauseResultDAO().getByTaskId(task_id)
+    rootCauseJson = rootCauseList[0].as_dict()
+    return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson, "modelMeta": modelMetaJson, "rootCauseJson": rootCauseJson})
+
+
+@app.route("/testJaeger", methods=["POST"])
+def testJaeger():
+    requestParam = request.get_json()
+    startTime = datetime.datetime.fromisoformat(requestParam["startTime"])
+    endTime = datetime.datetime.fromisoformat(requestParam["endTime"])
+    data = ELASTICSEARCH.getPCData(startTime.timestamp(), endTime.timestamp(), 1000, -1)
+    # 提取所有键
+    keys = data.keys()
+
+    # 提取所有值
+    values = [data[key]['divide'] for key in keys]
+
+    for i in range(len(values)):
+        values[i] = values[i] * 100
+
+    # 写入CSV文件
+    with open('output.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+
+        # 写入表头
+        writer.writerow(keys)
+
+        # 写入数据
+        for row in zip(*values):
+            writer.writerow(row)
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=8888)
+    app.run(debug=False, host="0.0.0.0", port=5000)

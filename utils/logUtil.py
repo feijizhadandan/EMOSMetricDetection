@@ -1,17 +1,12 @@
 import logging
 
-from utils.configUtil import CONFIG
+from .configUtil import CONFIG
 
 '''
 系统输出日志的单例类
 '''
-
-
 class LogUtil:
     _logger = None
-
-    def __init__(self):
-        self.logger = None
 
     def __new__(cls):
         if cls._logger is None:
@@ -34,7 +29,6 @@ class LogUtil:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
-
 
 # 使用单例模式创建日志记录器, 使用的时候LOG.logger.info()这样用
 LOG = LogUtil()
