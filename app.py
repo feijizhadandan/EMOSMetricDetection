@@ -59,9 +59,13 @@ def train():
 def detect():
     requestParam = request.get_json()
     try:
-        startTime = datetime.datetime.fromisoformat(requestParam["startTime"])
-        endTime = datetime.datetime.fromisoformat(requestParam["endTime"])
         isDetectOnline = requestParam["isDetectOnline"]
+        if isDetectOnline:
+            startTime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            endTime = startTime
+        else:
+            startTime = datetime.datetime.fromisoformat(requestParam["startTime"])
+            endTime = datetime.datetime.fromisoformat(requestParam["endTime"])
         curDateTime = datetime.datetime.now()
         detectionTask = DetectionTask(
             taskId=str(uuid.uuid4()),
@@ -77,7 +81,7 @@ def detect():
             args=(detectionTask.taskId, requestParam["detectionParam"], detectionTask),
             daemon=True
         )
-        # TODO 线程问题，为什么这个不能在insert之后执行
+        # 线程问题，为什么这个不能在insert之后执行
         onlineThread.start()
         threadUtil.onlineDetectionTaskId = detectionTask.taskId
         threadUtil.detectionThreadsMap[detectionTask.taskId] = {"threadRef": onlineThread, "status": "running"}
@@ -89,6 +93,22 @@ def detect():
         })
     except:
         return jsonify({"success": False, "msg": "创建在线实时检测任务失败", "taskId": ""})
+
+
+@app.route('/stopDetect/<task_id>', methods=['GET'])
+def detectStop(task_id):
+    try:
+        threadUtil.detectionThreadsMap[task_id]["status"] = "stopped"
+        detectTask = DetectionTaskDAO().getByTaskId(task_id)
+        detectTask.status = "stopped"
+        DetectionTaskDAO().update(detectTask)
+        return jsonify({
+            "success": True,
+            "msg": "成功暂停在线实时检测任务",
+            "taskId": task_id
+        })
+    except:
+        return jsonify({"success": False, "msg": "暂停失败", "taskId": task_id})
 
 
 @app.route("/listModel", methods=["GET"])
@@ -129,7 +149,7 @@ def getDetectionTaskByTaskId(task_id):
     modelMetaJson = modelMeta.as_dict()
     # 获取根因
     rootCauseList = RootCauseResultDAO().getByTaskId(task_id)
-    rootCauseJson = rootCauseList[0].as_dict()
+    rootCauseJson = [rootCause.as_dict() for rootCause in rootCauseList]
     return jsonify({"scoreResultJson": scoreResultJson, "detectionResult": detectionResultJson, "modelMeta": modelMetaJson, "rootCauseJson": rootCauseJson})
 
 

@@ -175,7 +175,7 @@ if __name__ == "__main__":
     test_x_windows = segment(test_x, window_size, step_size)
     test_y_windows = segment(test_y, window_size, step_size)
 
-    device = torch.device('cuda:0')
+    device = torch.device('cpu')
     batch_size = 128
     num_blocks_encoder = 15
     num_blocks_decoder = 15

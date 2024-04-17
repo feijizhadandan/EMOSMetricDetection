@@ -1,6 +1,7 @@
 import datetime
 import json
 import random
+import threading
 
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
@@ -16,6 +17,7 @@ from dao.TrainTaskDAO import TrainTaskDAO
 from entity.ModelMetadata import ModelMetadata
 from entity.TrainTask import TrainTask
 from algorithm.metric.model import liner_ae, MyDataset, segment, metric_loss, evalution_roc
+from utils.logUtil import LOG
 from utils.prometheusUtil import PROMETHEUS
 from utils import saveModelUtil
 from utils.threadUtil import threadUtil
@@ -35,6 +37,14 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
     # 每个pod训练一个模型
     for podItemName in podList:
         trainSingly(podItemName, metricList, trainTask, metricMap)
+
+    # # 每个pod训练一个模型
+    # for podItemName in podList:
+    #     singleTrainingThread = threading.Thread(
+    #         target=trainSingly,
+    #         args=(podItemName, metricList, trainTask, metricMap)
+    #     )
+    #     singleTrainingThread.start()
 
     # 数据处理(处理成数组)
     train_x = []
@@ -72,7 +82,7 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
     # dim=train_x.shape[1]
     # 样本数量必须>100
     train_x_windows = segment(train_x, window_size, step_size)
-    device = torch.device('cuda:0')
+    device = torch.device('cpu')
     batch_size = 128
     num_blocks_encoder = 15
     num_blocks_decoder = 15
@@ -93,6 +103,7 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
     model.train()
     train_score = []
     for epoch in range(epochMax):
+        LOG.logger.info(f"total-训练轮次: {epoch}")
         for batch_idx, batch in enumerate(traindata_loader):
             input_x, _ = tuple(t.to(device) for t in batch)
             x_rebuild, x_root = model(input_x, input_x[:, window_size - step_size:window_size, :])
@@ -171,7 +182,7 @@ def trainSingly(podName, metricList, trainTask: TrainTask, metricMap):
     # dim=train_x.shape[1]
     # 样本数量必须>100
     train_x_windows = segment(train_x, window_size, step_size)
-    device = torch.device('cuda:0')
+    device = torch.device('cpu')
     batch_size = 128
     num_blocks_encoder = 15
     num_blocks_decoder = 15
@@ -192,6 +203,7 @@ def trainSingly(podName, metricList, trainTask: TrainTask, metricMap):
     model.train()
     train_score = []
     for epoch in range(epochMax):
+        LOG.logger.info(f"{podName} 训练轮次: {epoch}")
         for batch_idx, batch in enumerate(traindata_loader):
             input_x, _ = tuple(t.to(device) for t in batch)
             x_rebuild, x_root = model(input_x, input_x[:, window_size - step_size:window_size, :])

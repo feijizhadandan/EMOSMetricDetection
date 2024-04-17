@@ -19,6 +19,22 @@ class DetectionResultDAO:
             LOG.logger.exception("DetectionResult.insert rollback")
             raise Exception
 
+    def updateByTaskIdAndPodName(self, detectionResult: DetectionResult):
+        session = None
+        try:
+            session = MYSQL.scopedSessionFactory()
+            oldResult = session.query(DetectionResult).filter(DetectionResult.taskId == detectionResult.taskId, DetectionResult.podName == detectionResult.podName).first()
+            # 更新部分数据
+            oldResult.abnormal = detectionResult.abnormal
+            oldResult.maxScore = detectionResult.maxScore
+            session.add(oldResult)
+            session.commit()
+        except Exception:
+            if session:
+                session.rollback()
+            LOG.logger.exception("DetectionResultDAO.update rollback")
+            raise Exception
+
     def bulkInsert(self, detectionResultList: List[DetectionResult]):
         session = None
         try:

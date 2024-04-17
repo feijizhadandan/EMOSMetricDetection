@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, BigInteger
+from sqlalchemy import Column, String, BigInteger, DateTime
+from sqlalchemy.sql import func
 
 from entity.SQLAlchemyBase import SQLAlchemyBase
 
@@ -21,6 +22,8 @@ class RootCauseResult(SQLAlchemyBase):
     top_3 = Column(String)
     top_4 = Column(String)
     top_5 = Column(String)
+    startTime = Column(DateTime(timezone=True), default=func.now())
+    endTime = Column(DateTime(timezone=True), default=func.now())
 
     def as_dict(self):
         return {
@@ -31,4 +34,6 @@ class RootCauseResult(SQLAlchemyBase):
             "top_3": self.top_3,
             "top_4": self.top_4,
             "top_5": self.top_5,
+            "startTime": self.startTime,
+            "endTime": self.endTime,
         }

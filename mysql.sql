@@ -59,5 +59,18 @@ create table metric_detection_score_record(
     primary key (id)
 );
 
-
+-- auto-generated definition
+create table metric_root_cause_result
+(
+    id        bigint auto_increment comment '数据库自增id'
+        primary key,
+    taskId    varchar(100) not null comment '检测任务的id(uuid)',
+    top_1     varchar(50)  not null comment '根因TOP1',
+    top_2     varchar(50)  not null comment '根因TOP2',
+    top_3     varchar(50)  not null comment '根因TOP3',
+    top_4     varchar(50)  not null comment '根因TOP4',
+    top_5     varchar(50)  not null comment '根因TOP5',
+    startTime datetime     null comment '根因定位起始时间',
+    endTime   datetime     null comment '根因定位结束时间'
+);
 
