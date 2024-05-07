@@ -260,13 +260,11 @@ def onlineRootCauseAnalyze(taskId, abnormalStartTime, abnormalEndTime, rootCaseD
     # 降序排列
     sorted_indices = np.argsort(median_list)[::-1]
     metric_cnt = len(load_metricNames)
-    print("根因定位TOP10：")
-    for i in range(len(sorted_indices)):
-        if i > 9:
-            break
+    LOG.logger.info("根因定位TOP5：")
+    for i in range(5):
         pod_idx = sorted_indices[i] // metric_cnt
         metric_idx = sorted_indices[i] % metric_cnt
-        print(i + 1, ": ", load_podNames[pod_idx], "(", load_metricNames[metric_idx], ")")
+        LOG.logger.info(f"{i + 1}: {load_podNames[pod_idx]}({load_metricNames[metric_idx]})")
 
     RootCauseResultDAO().insert(
         RootCauseResult(
@@ -305,9 +303,12 @@ def detectStart(threadName: str, detectParam: dict, detectionTask: DetectionTask
                                           endTime=detectionTask.endTime.timestamp())
         PROMETHEUS.fillMetricsWithPreviousValue(metricMap)
 
+        exists_anomalous = False
         # 每个pod单独检测
         for podItemName in load_podNames:
-            detectSingly(podItemName, detectionTask, metricMap, False)
+            single_exists_anomalous, _, _ = detectSingly(podItemName, detectionTask, metricMap, False)
+            if single_exists_anomalous:
+                exists_anomalous = True
 
         real_x = []
         for podName in load_podNames:
@@ -357,10 +358,9 @@ def detectStart(threadName: str, detectParam: dict, detectionTask: DetectionTask
                     0.5)
 
         a = real_score.cpu().numpy()
-
+        total_exists_anomalous = False
         score_time = detectionTask.startTime
         detectionScoreResultList = []
-        exists_anomalous = False
         score_in_window_list = []
         # 记录每个时间窗内的最大score
         for score_window in real_score:
@@ -372,6 +372,7 @@ def detectStart(threadName: str, detectParam: dict, detectionTask: DetectionTask
             score_in_window_list.append(score_in_window)
             if score_in_window > load_threshold:
                 exists_anomalous = True
+                total_exists_anomalous = True
             scoreResult = DetectionScoreRecord(
                 taskId=detectionTask.taskId,
                 podName="-",
@@ -384,40 +385,44 @@ def detectStart(threadName: str, detectParam: dict, detectionTask: DetectionTask
             score_time += timedelta(seconds=50)
         DetectionScoreRecordDAO().bulkInsert(detectionScoreRecordList=detectionScoreResultList)
 
-        root_score = abs(origin_data - mean_list) / mean_list
-        median_list = np.median(root_score, axis=0)
-        # 降序排列
-        sorted_indices = np.argsort(median_list)[::-1]
-        metric_cnt = len(load_metricNames)
-        print("根因定位TOP10：")
-        for i in range(len(sorted_indices)):
-            if i > 9:
-                break
-            pod_idx = sorted_indices[i] // metric_cnt
-            metric_idx = sorted_indices[i] % metric_cnt
-            print(i + 1, ": ", load_podNames[pod_idx], "(", load_metricNames[metric_idx], ")")
+        # 存在异常则进行根因定位
+        if exists_anomalous:
+            root_score = abs(origin_data - mean_list) / mean_list
+            median_list = np.median(root_score, axis=0)
+            # 降序排列
+            sorted_indices = np.argsort(median_list)[::-1]
+            metric_cnt = len(load_metricNames)
+            print("根因定位TOP10：")
+            for i in range(len(sorted_indices)):
+                if i > 9:
+                    break
+                pod_idx = sorted_indices[i] // metric_cnt
+                metric_idx = sorted_indices[i] % metric_cnt
+                print(i + 1, ": ", load_podNames[pod_idx], "(", load_metricNames[metric_idx], ")")
 
-        RootCauseResultDAO().insert(
-            RootCauseResult(
-                taskId=detectionTask.taskId,
-                top_1=load_podNames[sorted_indices[0] // metric_cnt] + "(" + load_metricNames[
-                    sorted_indices[0] % metric_cnt] + ")",
-                top_2=load_podNames[sorted_indices[1] // metric_cnt] + "(" + load_metricNames[
-                    sorted_indices[1] % metric_cnt] + ")",
-                top_3=load_podNames[sorted_indices[2] // metric_cnt] + "(" + load_metricNames[
-                    sorted_indices[2] % metric_cnt] + ")",
-                top_4=load_podNames[sorted_indices[3] // metric_cnt] + "(" + load_metricNames[
-                    sorted_indices[3] % metric_cnt] + ")",
-                top_5=load_podNames[sorted_indices[4] // metric_cnt] + "(" + load_metricNames[
-                    sorted_indices[4] % metric_cnt] + ")",
+            RootCauseResultDAO().insert(
+                RootCauseResult(
+                    taskId=detectionTask.taskId,
+                    top_1=load_podNames[sorted_indices[0] // metric_cnt] + "(" + load_metricNames[
+                        sorted_indices[0] % metric_cnt] + ")",
+                    top_2=load_podNames[sorted_indices[1] // metric_cnt] + "(" + load_metricNames[
+                        sorted_indices[1] % metric_cnt] + ")",
+                    top_3=load_podNames[sorted_indices[2] // metric_cnt] + "(" + load_metricNames[
+                        sorted_indices[2] % metric_cnt] + ")",
+                    top_4=load_podNames[sorted_indices[3] // metric_cnt] + "(" + load_metricNames[
+                        sorted_indices[3] % metric_cnt] + ")",
+                    top_5=load_podNames[sorted_indices[4] // metric_cnt] + "(" + load_metricNames[
+                        sorted_indices[4] % metric_cnt] + ")",
+                    startTime=detectionTask.startTime,
+                    endTime=detectionTask.endTime
+                )
             )
-        )
 
         # podName="-" 表示是总的检测任务
         DetectionResultDAO().insert(DetectionResult(
             taskId=detectionTask.taskId,
             podName="-",
-            abnormal=exists_anomalous,
+            abnormal=total_exists_anomalous,
             maxScore=max(score_in_window_list),
             threshold=load_threshold
         ))

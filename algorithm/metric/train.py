@@ -107,15 +107,20 @@ def onlineTrain(threadName: str, trainParameters: dict, trainTask: TrainTask):
         for batch_idx, batch in enumerate(traindata_loader):
             input_x, _ = tuple(t.to(device) for t in batch)
             x_rebuild, x_root = model(input_x, input_x[:, window_size - step_size:window_size, :])
+            LOG.logger.info(f"完成x_rebuild的重建")
             # 计算训练数据集的score以后续获得阈值(最后一轮才计算)
             if epoch == epochMax - 1:
+                LOG.logger.info(f"最后一轮计算阈值")
                 x_rebuild_cpu = x_rebuild.detach().cpu()
                 input_x_cpu = input_x[:, window_size - step_size:window_size, :].detach().cpu()
                 eurDistance = np.linalg.norm(x_rebuild_cpu - input_x_cpu, axis=2)
                 train_score.append(eurDistance)
             loss1 = loss0(x_rebuild, input_x[:, window_size - step_size:window_size, :], parameter=0.1)
+            LOG.logger.info(f"完成loss1的计算")
             loss1.backward()
+            LOG.logger.info(f"完成loss1的反向传播")
             optimizer1.step()
+            LOG.logger.info(f"完成loss1的优化")
             all_loss1.append(loss1.item())
 
     # 计算均值和标准差

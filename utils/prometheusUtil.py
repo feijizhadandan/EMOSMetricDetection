@@ -59,8 +59,7 @@ class PrometheusUtil:
         # 不能一次取出过多的点位，需要分片查询
         segment = math.ceil((endTime - startTime) / 11001)  # 需要分segment段
         segSize = int((endTime - startTime + 1) // segment)  # 每段大小
-        # LOG.logger.info(f"prometheus: 需要访问{segment}段，每段大小为{segSize}")
-        # podNameList = self.getAllPodNamesRelatedToTrace()
+        LOG.logger.info(f"prometheus: 需要访问{segment}段，每段大小为{segSize}")
         podNameList = podList
         metricMap = {
             metric: {
